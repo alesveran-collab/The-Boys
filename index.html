@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>THE BOYS — Discipline Protocol</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --red:#E30613; --red2:#b80010; --red-glow:rgba(227,6,19,0.35);
+  --red-dim:rgba(227,6,19,0.10);
+  --gold:#f0c040; --gold-dim:rgba(240,192,64,0.12);
+  --bg:#050505; --surface:#111111; --surface2:#181818; --surface3:#202020;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.05);
+  --border-red:rgba(227,6,19,0.28);
+  --text:#e8e8e8; --muted:#666666; --muted2:#8a8a8a;
+  --radius:14px;
+  --font-display:'Teko','Rajdhani',sans-serif;
+  --font-ui:'Rajdhani',system-ui,sans-serif;
+  --track-tight:0.06em;
+  --track-label:0.22em;
+  --track-wide:0.32em;
+  --shadow-red-text:0 0 10px rgba(227,6,19,0.55),0 0 22px rgba(227,6,19,0.25);
+  --shadow-gold-text:0 0 8px rgba(240,192,64,0.45),0 0 18px rgba(240,192,64,0.2);
+}
+html{
+  letter-spacing:var(--track-tight);
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-weight:600;font-size:15px;letter-spacing:var(--track-tight);min-height:100dvh;display:flex;justify-content:center;overflow:hidden;overflow-x:hidden;-webkit-text-size-adjust:100%;}
+#app{width:100%;max-width:420px;min-height:100dvh;position:relative;overflow:hidden;background:var(--bg);min-width:0;}
+
+/* layout helpers — предотвращают вылет текста из flex */
+.u-min0{min-width:0;}
+.row{display:flex;align-items:center;gap:10px;width:100%;min-width:0;}
+.row-top{align-items:flex-start;}
+.row-between{justify-content:space-between;}
+.row-grow{flex:1;min-width:0;}
+.row-fixed{flex-shrink:0;}
+.input-row{display:flex;gap:8px;align-items:stretch;width:100%;min-width:0;}
+.input-row .add-task-input,.input-row .reg-input{margin-bottom:0;}
+
+/* ── SCREENS ── */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateX(24px);transition:opacity .28s cubic-bezier(.4,0,.2,1),transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:calc(88px + env(safe-area-inset-bottom,0px));min-width:0;}
+.screen::-webkit-scrollbar{display:none;}
+.screen.active{opacity:1;pointer-events:all;transform:translateX(0);}
+.screen.exit{opacity:0;transform:translateX(-24px);}
+
+/* ── BG TEXTURE ── */
+.noise-bg{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px;}
+.blood-vignette{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,transparent 55%,rgba(227,6,19,0.05) 100%);}
+
+/* ── HEADER ── */
+.app-header{padding:18px 20px 14px;position:relative;z-index:2;flex-shrink:0;min-width:0;}
+.header-inner{min-width:0;max-width:100%;}
+.header-title{font-family:var(--font-display);font-size:clamp(22px,6.2vw,28px);font-weight:600;line-height:1.05;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);text-shadow:var(--shadow-red-text);overflow-wrap:anywhere;word-break:break-word;}
+.header-sub{font-family:var(--font-ui);font-size:10px;font-weight:600;letter-spacing:var(--track-wide);color:var(--muted);text-transform:uppercase;margin-top:6px;line-height:1.35;max-width:100%;overflow-wrap:anywhere;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;min-width:0;overflow:hidden;}
+.card-red{background:var(--surface);border:1px solid var(--border-red);border-radius:var(--radius);padding:16px;min-width:0;overflow:hidden;}
+.card-dark{background:#0c0c0c;border:1px solid var(--border2);border-radius:var(--radius);padding:16px;}
+
+/* ── GLOW ── */
+.glow-red{box-shadow:0 0 28px rgba(227,6,19,0.3),0 0 56px rgba(227,6,19,0.08);}
+.glow-red-text{text-shadow:var(--shadow-red-text);}
+.glow-gold{box-shadow:0 0 18px rgba(240,192,64,0.25);}
+
+/* ══════════════════════════════════════
+   UNIFIED NEON BUTTON SYSTEM
+   Active  → red neon border + glow
+   Done    → grey neon border
+   Danger  → dim red outline
+   Ghost   → barely-there grey
+══════════════════════════════════════ */
+.btn-primary,.btn-secondary,.btn-ghost,.btn-danger{
+  font-family:var(--font-display);
+  font-weight:600;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  border-radius:12px;
+  cursor:pointer;
+  transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s,background .18s;
+  text-align:center;
+  max-width:100%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+/* RED NEON — primary action */
+.btn-primary{
+  background:rgba(227,6,19,0.07);
+  color:#fff;
+  border:1.5px solid var(--red);
+  font-size:14px;
+  box-shadow:0 0 10px rgba(227,6,19,0.45),0 0 24px rgba(227,6,19,0.18),inset 0 0 10px rgba(227,6,19,0.06);
+  text-shadow:0 0 10px rgba(227,6,19,0.55);
+}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.07) 50%,transparent 65%);transform:skewX(-20deg) translateX(-100%);animation:btn-sheen 3.5s ease-in-out infinite;pointer-events:none;}
+@keyframes btn-sheen{0%,60%{transform:skewX(-20deg) translateX(-100%);}100%{transform:skewX(-20deg) translateX(260%);}}
+.btn-primary:active{transform:scale(.97);box-shadow:0 0 6px rgba(227,6,19,0.2),inset 0 0 16px rgba(227,6,19,0.12);background:rgba(227,6,19,0.14);}
+.btn-primary:disabled,.btn-primary[disabled]{background:#0a0a0a;color:#333;border-color:#1e1e1e;box-shadow:none;text-shadow:none;cursor:not-allowed;}
+.btn-primary:disabled::after,.btn-primary[disabled]::after{display:none;}
+/* GREY NEON — secondary / done */
+.btn-secondary{
+  background:rgba(255,255,255,0.02);
+  color:#888;
+  border:1.5px solid rgba(150,150,150,0.38);
+  font-size:13px;
+  box-shadow:0 0 8px rgba(180,180,180,0.1),0 0 18px rgba(180,180,180,0.04),inset 0 0 8px rgba(180,180,180,0.03);
+  text-shadow:0 0 8px rgba(200,200,200,0.2);
+}
+.btn-secondary:active{transform:scale(.97);background:rgba(255,255,255,0.05);}
+/* GHOST */
+.btn-ghost{background:transparent;color:var(--muted2);border:1.5px solid rgba(120,120,120,0.22);font-size:13px;box-shadow:none;}
+.btn-ghost:active{background:rgba(255,255,255,0.04);transform:scale(.97);}
+/* DANGER */
+.btn-danger{background:rgba(227,6,19,0.04);color:var(--red);border:1.5px solid rgba(227,6,19,0.38);font-size:13px;box-shadow:0 0 8px rgba(227,6,19,0.12),inset 0 0 8px rgba(227,6,19,0.03);text-shadow:0 0 8px rgba(227,6,19,0.35);}
+.btn-danger:active{background:rgba(227,6,19,0.1);transform:scale(.97);}
+/* PLUS BUTTON — SVG icon, pixel-perfect centre */
+.btn-plus{
+  width:48px!important;
+  height:48px!important;
+  flex-shrink:0;
+  padding:0!important;
+  border-radius:12px;
+  font-size:0!important;   /* hide any residual text */
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+
+/* ── MAIN CHECK BUTTON ── */
+.big-check-btn{width:100%;padding:10px 14px;border-radius:16px;font-family:var(--font-display);font-weight:600;font-size:clamp(15px,4.2vw,24px);line-height:1.2;letter-spacing:0.08em;text-transform:uppercase;border:none;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;min-height:72px;display:flex;align-items:center;justify-content:center;text-align:center;}
+.big-check-btn #home-check-text{display:block;max-width:100%;overflow-wrap:anywhere;word-break:break-word;}
+.big-check-btn .check-inner{align-items:center;justify-content:center;gap:8px;max-width:100%;flex-wrap:wrap;}
+.big-check-btn .check-inner span:last-child{text-align:center;line-height:1.2;overflow-wrap:anywhere;}
+.big-check-btn.available{
+  background:rgba(227,6,19,0.07);
+  color:#fff;
+  border:2px solid var(--red);
+  box-shadow:0 0 20px rgba(227,6,19,0.5),0 0 48px rgba(227,6,19,0.18),inset 0 0 18px rgba(227,6,19,0.07);
+  text-shadow:0 0 14px rgba(227,6,19,0.65),0 0 30px rgba(227,6,19,0.25);
+}
+.big-check-btn.available::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,transparent 60%);pointer-events:none;}
+.big-check-btn.available::after{content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(105deg,transparent,rgba(255,255,255,0.08),transparent);transform:skewX(-20deg);animation:sheen 3s ease-in-out infinite;}
+@keyframes sheen{0%,60%{left:-60%;}100%{left:140%;}}
+.big-check-btn.done{
+  background:rgba(255,255,255,0.02);
+  border:2px solid rgba(150,150,150,0.4);
+  color:#888;
+  box-shadow:0 0 16px rgba(180,180,180,0.13),0 0 32px rgba(180,180,180,0.05),inset 0 0 14px rgba(180,180,180,0.03);
+}
+.big-check-btn.done .check-inner{display:flex;align-items:center;justify-content:center;gap:10px;}
+.big-check-btn.done{font-family:var(--font-display);}
+.big-check-btn.done .check-done-text{font-family:var(--font-display);font-weight:600;font-size:clamp(14px,4vw,20px);letter-spacing:0.18em;text-transform:uppercase;line-height:1.2;text-align:center;color:#777;text-shadow:0 0 8px rgba(160,160,160,0.18);}
+.big-check-btn.done::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.015),transparent);pointer-events:none;}
+.big-check-btn.disabled{background:#0c0c0c;color:#242424;border:1px solid #181818;cursor:not-allowed;}
+.big-check-btn:active:not(.disabled){transform:scale(.98);box-shadow:none;}
+
+/* ── STAT CHIPS ── */
+.stat-row{display:flex;gap:6px;min-width:0;align-items:stretch;}
+.stat-chip{
+  flex:1 1 0;
+  background:linear-gradient(170deg,#181818 0%,#0f0f0f 100%);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px;
+  padding:10px 4px 8px;
+  display:grid;
+  grid-template-rows:22px 1fr auto;
+  justify-items:center;
+  align-content:stretch;
+  row-gap:4px;
+  position:relative;overflow:hidden;
+  min-width:0;
+}
+.stat-chip-icon{
+  font-size:12px;
+  line-height:1;
+  width:100%;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0;
+  user-select:none;
+}
+.stat-chip::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.07),transparent);}
+.stat-chip::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);}
+.stat-chip.highlight{border-color:rgba(227,6,19,0.3);background:linear-gradient(170deg,#1c0304 0%,#100203 100%);}
+.stat-chip.highlight::before{background:linear-gradient(90deg,transparent,rgba(227,6,19,0.3),transparent);}
+.stat-chip.chip-gold{border-color:rgba(240,192,64,0.22);background:linear-gradient(170deg,#191304 0%,#100e02 100%);}
+.stat-chip.chip-gold::before{background:linear-gradient(90deg,transparent,rgba(240,192,64,0.25),transparent);}
+.stat-val{font-family:var(--font-display);font-weight:600;font-size:clamp(18px,5.8vw,28px);line-height:1;color:var(--text);letter-spacing:0.04em;max-width:100%;text-align:center;display:flex;align-items:center;justify-content:center;min-height:32px;margin:0;width:100%;align-self:stretch;}
+.stat-val.red{color:var(--red);text-shadow:var(--shadow-red-text);}
+.stat-val.gold{color:var(--gold);text-shadow:var(--shadow-gold-text);}
+.stat-label{font-family:var(--font-ui);font-size:8.5px;font-weight:700;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;text-align:center;line-height:1.2;max-width:100%;padding:0 2px 2px;margin:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;}
+.stat-icon{font-size:13px;margin-bottom:1px;}
+
+/* ── PROGRESS BAR ── */
+.prog-track{background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;height:5px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--red2),var(--red));border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1);box-shadow:0 0 6px rgba(227,6,19,0.4);}
+.prog-fill.gold{background:linear-gradient(90deg,#c8952a,var(--gold));box-shadow:0 0 6px rgba(240,192,64,0.35);}
+
+/* ── TAB BAR ── */
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(8,8,8,0.96);border-top:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);padding:8px 4px max(10px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:center;z-index:100;box-sizing:border-box;}
+.tab-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;padding:6px 4px;border-radius:10px;transition:all .2s;flex:1;min-width:0;max-width:25%;}
+.tab-btn:active{background:rgba(227,6,19,0.07);}
+.tab-icon{font-size:20px;line-height:1;transition:all .2s;filter:grayscale(1) opacity(0.35);flex-shrink:0;}
+.tab-label{font-family:var(--font-ui);font-size:8.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);transition:color .2s,text-shadow .2s;text-align:center;line-height:1.15;width:100%;max-width:100%;padding:0 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;}
+.tab-btn.active .tab-icon{filter:none;filter:drop-shadow(0 0 5px rgba(227,6,19,0.6));}
+.tab-btn.active .tab-label{color:var(--red);text-shadow:0 0 8px rgba(227,6,19,0.45);}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-family:var(--font-display);font-weight:600;font-size:22px;line-height:1.1;letter-spacing:0.1em;text-transform:uppercase;color:var(--text);}
+.sec-title span{color:var(--red);text-shadow:var(--shadow-red-text);}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:4px;border-radius:6px;padding:4px 8px;font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:var(--track-label);text-transform:uppercase;max-width:100%;text-align:center;line-height:1.2;overflow-wrap:anywhere;}
+.badge-red{background:rgba(227,6,19,0.1);color:var(--red);border:1px solid rgba(227,6,19,0.25);}
+.badge-gold{background:rgba(240,192,64,0.1);color:var(--gold);border:1px solid rgba(240,192,64,0.25);}
+.badge-dark{background:rgba(255,255,255,0.03);color:var(--muted2);border:1px solid var(--border);}
+
+/* ── ABILITY CARD ── */
+.ability-card{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:14px;transition:all .2s;cursor:pointer;overflow:hidden;}
+.ability-card > div:first-of-type{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0;}
+.ability-card .ability-col-main{flex:1;min-width:0;}
+.ability-card .ability-col-side{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;gap:4px;text-align:right;flex-shrink:0;min-width:72px;max-width:40%;}
+.boss-tip{font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--muted2);margin-top:8px;padding:10px 12px;border-radius:10px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word;}
+.boss-tip.neutral{background:rgba(0,0,0,0.3);border:1px solid var(--border2);}
+.boss-tip.redhint{background:rgba(227,6,19,0.04);border:1px solid rgba(227,6,19,0.15);}
+.week-row{display:flex;gap:4px;justify-content:space-between;min-width:0;width:100%;}
+.week-cell{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.unlock-sub{max-width:min(340px,92vw);margin-left:auto;margin-right:auto;line-height:1.4;}
+.ability-card .ability-title-row{display:flex;align-items:flex-start;gap:6px;min-width:0;}
+.ability-card .ability-title-row .ability-name{min-width:0;}
+.ability-card.owned{border-color:rgba(227,6,19,0.3);background:rgba(227,6,19,0.03);}
+.ability-card.locked{opacity:.45;cursor:not-allowed;}
+.ability-card:not(.locked):active{transform:scale(.99);}
+.ability-name{font-family:var(--font-ui);font-size:14px;font-weight:700;letter-spacing:var(--track-tight);text-transform:uppercase;color:var(--text);line-height:1.2;overflow-wrap:anywhere;word-break:break-word;}
+.ability-desc{font-family:var(--font-ui);font-size:12px;font-weight:500;letter-spacing:0.02em;text-transform:none;color:var(--muted2);line-height:1.45;margin-top:4px;margin-left:0;padding-left:22px;overflow-wrap:anywhere;word-break:break-word;}
+.ability-cost{display:flex;align-items:center;gap:4px;font-family:var(--font-ui);font-size:13px;font-weight:700;letter-spacing:var(--track-tight);}
+
+/* ── BOSS CARD ── */
+.boss-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:0;margin-bottom:10px;position:relative;overflow:hidden;transition:all .2s;}
+.boss-inner{padding:14px 14px 14px 16px;min-width:0;width:100%;box-sizing:border-box;}
+.boss-reward-val{font-family:var(--font-display);font-weight:600;font-size:clamp(13px,3.6vw,16px);line-height:1.2;}
+.boss-top-row{display:flex;align-items:flex-start;gap:10px;min-width:0;}
+.boss-top-row .boss-emoji-cell{font-size:28px;line-height:1;flex-shrink:0;width:44px;height:44px;text-align:center;padding:0;display:flex;align-items:center;justify-content:center;}
+.boss-top-row .boss-emoji-cell .boss-face{width:40px;height:40px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,0.12);box-shadow:0 0 12px rgba(0,0,0,0.5);}
+.boss-top-row .boss-emoji-cell .boss-face.locked-face{filter:grayscale(1);opacity:.35;}
+.boss-top-row .boss-text-cell{flex:1;min-width:0;}
+.boss-top-row .boss-reward-cell{text-align:right;flex-shrink:0;min-width:64px;max-width:32%;}
+.boss-title-row{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;margin-bottom:4px;min-width:0;}
+.boss-title-row .boss-name{min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.boss-title-row .badge{flex-shrink:0;max-width:42%;}
+.boss-card.available{border-color:rgba(227,6,19,0.3);cursor:pointer;}
+.boss-card.available:active{transform:scale(.99);}
+.boss-card.defeated{opacity:.55;border-color:rgba(240,192,64,0.2);}
+.boss-card.locked-boss{opacity:.4;cursor:not-allowed;}
+.boss-card.needs-more{border-color:rgba(255,255,255,0.06);cursor:not-allowed;}
+.boss-name{font-family:var(--font-display);font-weight:600;font-size:clamp(16px,5vw,24px);line-height:1.05;letter-spacing:0.06em;text-transform:uppercase;}
+.boss-req{font-family:var(--font-ui);font-size:12px;font-weight:500;letter-spacing:0.03em;color:var(--muted2);margin-top:2px;line-height:1.45;overflow-wrap:anywhere;word-break:break-word;}
+.boss-stripe{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;}
+.boss-stripe.red{background:var(--red);box-shadow:0 0 10px rgba(227,6,19,0.5);}
+.boss-stripe.gold{background:var(--gold);}
+.boss-stripe.grey{background:#282828;}
+
+/* ── CLASS SELECT ── */
+#class-grid{align-items:stretch;}
+.class-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 12px;cursor:pointer;transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;min-height:100%;min-width:0;overflow:hidden;}
+.class-card:active{transform:scale(.98);}
+.class-card.selected{border-color:var(--red);background:rgba(227,6,19,0.06);box-shadow:0 0 20px rgba(227,6,19,0.2);}
+.class-emoji{font-size:34px;line-height:1;}
+.class-name{font-family:var(--font-display);font-weight:600;font-size:clamp(18px,5vw,24px);line-height:1;letter-spacing:0.08em;text-transform:uppercase;margin-top:6px;max-width:100%;overflow-wrap:anywhere;}
+.class-desc{font-family:var(--font-ui);font-size:11px;font-weight:500;letter-spacing:0.04em;color:var(--muted2);margin-top:6px;line-height:1.4;text-transform:none;flex:1;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow-wrap:anywhere;text-align:center;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal-box{background:#121212;border:1px solid rgba(255,255,255,0.09);border-top:2px solid var(--red);border-radius:20px 20px 0 0;padding:28px 20px max(40px,env(safe-area-inset-bottom));width:100%;max-width:420px;max-height:min(92dvh,calc(100dvh - 24px));overflow-y:auto;overflow-x:hidden;animation:slideUp .25s cubic-bezier(.4,0,.2,1);min-width:0;-webkit-overflow-scrolling:touch;}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-title{font-family:var(--font-display);font-weight:600;font-size:clamp(22px,6vw,30px);line-height:1.1;letter-spacing:0.08em;text-transform:uppercase;color:var(--red);text-shadow:var(--shadow-red-text);overflow-wrap:anywhere;word-break:break-word;}
+.modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;min-width:0;}
+.modal-actions .btn-primary,.modal-actions .btn-secondary,.modal-actions .btn-danger{flex:1;min-width:0;}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-120px);z-index:600;background:#131313;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 16px;font-family:var(--font-ui);font-size:12px;font-weight:700;letter-spacing:var(--track-label);text-transform:uppercase;color:var(--text);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;opacity:0;white-space:normal;width:min(320px,calc(100vw - 32px));max-width:min(320px,calc(100vw - 32px));text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.7);overflow-wrap:anywhere;word-break:break-word;line-height:1.35;box-sizing:border-box;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.gold{border-color:rgba(240,192,64,0.35);color:var(--gold);text-shadow:var(--shadow-gold-text);}
+
+/* ── FIGHT ANIM ── */
+.fight-overlay{position:fixed;inset:0;z-index:700;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn .3s;padding:24px 20px;box-sizing:border-box;overflow-y:auto;text-align:center;}
+.fight-text{font-family:var(--font-display);font-weight:600;font-size:clamp(36px,14vw,72px);line-height:1;letter-spacing:0.08em;text-transform:uppercase;color:var(--red);text-shadow:var(--shadow-red-text),0 0 48px rgba(227,6,19,0.35);animation:pulseText 0.5s ease-in-out infinite alternate;max-width:100%;overflow-wrap:anywhere;}
+@keyframes pulseText{from{transform:scale(1);}to{transform:scale(1.05);text-shadow:0 0 28px rgba(227,6,19,0.75),0 0 64px rgba(227,6,19,0.4),0 0 100px rgba(227,6,19,0.25);}}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border2);margin:14px 0;}
+.divider-red{height:1px;background:linear-gradient(90deg,transparent,rgba(227,6,19,0.3),transparent);margin:14px 0;}
+
+/* ── STREAK FIRE ── */
+.streak-display{display:flex;align-items:center;gap:8px;}
+.streak-num{font-family:var(--font-display);font-weight:600;font-size:56px;line-height:1;letter-spacing:0.06em;color:var(--red);text-shadow:var(--shadow-red-text);}
+.streak-fire{font-size:40px;animation:flicker .4s ease-in-out infinite alternate;}
+@keyframes flicker{from{transform:scale(1) rotate(-3deg);}to{transform:scale(1.1) rotate(3deg);}}
+
+/* ── CLASS BADGE ── */
+.class-portrait{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--surface2);box-shadow:0 0 14px rgba(227,6,19,0.25);}
+
+/* ── POWER BAR ── */
+.power-display{display:flex;align-items:baseline;gap:6px;}
+.power-num{font-family:var(--font-display);font-weight:600;font-size:44px;line-height:1;color:var(--text);letter-spacing:0.06em;}
+.power-unit{font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--muted2);letter-spacing:var(--track-label);text-transform:uppercase;}
+
+/* ── UNLOCK POPUP ── */
+.unlock-popup{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(24px,env(safe-area-inset-top)) 20px max(32px,env(safe-area-inset-bottom));text-align:center;animation:fadeIn .3s;overflow-y:auto;box-sizing:border-box;}
+.unlock-big{font-family:var(--font-display);font-weight:600;font-size:min(22vw,120px);line-height:1;letter-spacing:0.06em;color:var(--red);text-shadow:var(--shadow-red-text);animation:scaleIn .4s cubic-bezier(.4,0,.2,1);max-width:100%;}
+@keyframes scaleIn{from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ── SCROLLABLE CONTENT ── */
+.content{padding:0 16px;position:relative;z-index:2;flex:1;min-width:0;width:100%;}
+
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;min-width:0;}
+.card-head h2,.card-head .card-head-title{font-family:var(--font-display);font-weight:600;font-size:clamp(17px,4.8vw,22px);letter-spacing:0.10em;line-height:1.05;text-transform:uppercase;margin:0;flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;padding-right:6px;}
+.card-head-meta{font-family:var(--font-ui);font-size:11px;color:var(--muted);letter-spacing:0.08em;flex-shrink:0;white-space:nowrap;}
+
+.home-boss-row{display:flex;align-items:center;gap:10px;min-width:0;width:100%;}
+.home-boss-main{flex:1;min-width:0;}
+.home-boss-kicker{font-family:var(--font-ui);font-size:9px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;line-height:1.2;}
+#home-boss-name{font-family:var(--font-display);font-weight:600;font-size:clamp(16px,4.8vw,20px);letter-spacing:0.06em;line-height:1.1;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-boss-face{width:40px;height:40px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;}
+#home-boss-req{font-family:var(--font-ui);font-size:11px;color:var(--muted2);margin-top:2px;line-height:1.35;overflow-wrap:anywhere;}
+.home-boss-side{flex-shrink:0;width:70px;text-align:right;}
+.home-boss-side .prog-track{width:100%;max-width:70px;margin-left:auto;}
+
+.compound-row{display:flex;align-items:center;gap:12px;min-width:0;}
+.compound-row .compound-body{flex:1;min-width:0;}
+.compound-row .compound-num{font-family:var(--font-display);font-weight:600;font-size:clamp(18px,5.5vw,22px);color:var(--red);flex-shrink:0;line-height:1;display:flex;align-items:center;justify-content:center;min-width:40px;}
+.compound-emoji{font-size:22px;line-height:1;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.compound-title{font-family:var(--font-ui);font-size:13px;font-weight:700;letter-spacing:0.08em;line-height:1.25;overflow-wrap:anywhere;text-transform:uppercase;}
+.compound-desc{font-family:var(--font-ui);font-size:11px;font-weight:500;color:var(--muted2);margin-top:4px;line-height:1.45;overflow-wrap:anywhere;}
+
+/* ── TITLE CHIP ── */
+.title-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.3);border-radius:8px;padding:4px 10px;font-family:var(--font-display);font-weight:600;font-size:16px;line-height:1;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);text-shadow:var(--shadow-gold-text);}
+
+/* MISC */
+.sep{margin:10px 0;}
+.fight-overlay > *{max-width:100%;overflow-wrap:anywhere;}
+.no-class-note{text-align:center;padding:40px 16px;color:var(--muted2);font-family:var(--font-ui);font-size:15px;font-weight:600;letter-spacing:var(--track-tight);line-height:1.5;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;}
+
+/* ── REGISTRATION SCREEN ── */
+#screen-reg{padding-bottom:0;}
+.reg-bg-lines{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+.reg-bg-lines::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(227,6,19,0.5),transparent);animation:scanline 3.5s linear infinite;}
+@keyframes scanline{from{transform:translateY(0);}to{transform:translateY(100dvh);}}
+.reg-content{position:relative;z-index:2;display:flex;flex-direction:column;min-height:100dvh;padding:max(20px,env(safe-area-inset-top)) 24px max(28px,env(safe-area-inset-bottom));justify-content:center;overflow-x:hidden;min-width:0;}
+.reg-step-label{font-family:var(--font-ui);font-size:11px;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;line-height:1.3;}
+.reg-step-note{font-size:12px;color:var(--muted2);margin-bottom:14px;line-height:1.5;overflow-wrap:anywhere;}
+.reg-logo{width:80px;height:80px;border-radius:16px;border:1px solid var(--border-red);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 0 28px rgba(227,6,19,0.25);margin-bottom:24px;overflow:hidden;}
+.reg-logo img{width:100%;height:100%;object-fit:cover;border-radius:14px;}
+.reg-title{font-family:var(--font-display);font-weight:600;font-size:52px;line-height:0.95;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+.reg-subtitle{font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:var(--track-wide);color:var(--muted);text-transform:uppercase;margin-bottom:38px;}
+.reg-input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 14px;color:var(--text);font-family:var(--font-ui);font-size:16px;font-weight:600;letter-spacing:var(--track-tight);text-transform:none;outline:none;width:100%;min-width:0;transition:border-color .2s,box-shadow .2s;margin-bottom:10px;}
+.reg-input:focus{border-color:rgba(227,6,19,0.4);box-shadow:0 0 0 3px rgba(227,6,19,0.06);}
+.reg-input::placeholder{color:var(--muted);}
+
+/* ── TASKS SCREEN ── */
+.task-item{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:12px 12px;margin-bottom:8px;transition:all .2s;cursor:pointer;min-width:0;}
+.task-item .task-check{flex-shrink:0;}
+.task-item:active{transform:scale(.99);}
+.task-item.done-task{background:#0c0c0c;border-color:rgba(227,6,19,0.12);}
+.task-check{width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;background:transparent;}
+.task-check.checked{background:var(--red);border-color:var(--red);box-shadow:0 0 8px rgba(227,6,19,0.4);}
+.task-name{font-family:var(--font-ui);font-size:15px;font-weight:700;letter-spacing:var(--track-tight);text-transform:none;flex:1;min-width:0;line-height:1.35;overflow-wrap:anywhere;word-break:break-word;}
+.task-name.done-text{text-decoration:line-through;color:var(--muted);font-weight:600;}
+.add-task-input{background:var(--surface2);border:1px dashed rgba(255,255,255,0.09);border-radius:10px;padding:12px 12px;color:var(--text);font-family:var(--font-ui);font-size:15px;font-weight:600;letter-spacing:var(--track-tight);text-transform:none;outline:none;width:100%;min-width:0;transition:border-color .2s,border-style .2s;margin-bottom:8px;}
+.add-task-input:focus{border-color:rgba(227,6,19,0.35);border-style:solid;}
+.add-task-input::placeholder{color:var(--muted);}
+
+/* ── HOME HERO BANNER ── */
+.home-hero{position:relative;margin:0 16px 12px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0f0203 0%,#1b0406 50%,#0a0a0a 100%);border:1px solid rgba(227,6,19,0.2);padding:16px 56px 16px 16px;min-height:104px;display:flex;flex-direction:column;justify-content:center;min-width:0;}
+.home-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(227,6,19,0.15) 0%,transparent 60%);pointer-events:none;}
+.home-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(227,6,19,0.35),transparent);}
+.home-hero-tag{display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:var(--track-wide);color:var(--red);text-transform:uppercase;margin-bottom:6px;opacity:.95;line-height:1;text-shadow:0 0 10px rgba(227,6,19,0.4);}
+.home-hero-tag-dot{width:5px;height:5px;border-radius:50%;background:var(--red);box-shadow:0 0 6px rgba(227,6,19,0.8);animation:blink 1.4s ease-in-out infinite;flex-shrink:0;position:relative;top:0;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.home-hero-name{font-family:var(--font-display);font-weight:600;font-size:clamp(22px,7vw,36px);line-height:1.05;letter-spacing:0.06em;text-transform:uppercase;color:var(--text);max-width:100%;overflow-wrap:anywhere;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.home-hero-sub{font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--muted2);margin-top:6px;letter-spacing:var(--track-tight);text-transform:none;line-height:1.35;max-width:100%;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.home-hero-portrait{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:40px;line-height:1;width:48px;height:48px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 12px rgba(227,6,19,0.4));animation:floatUpDown 2.8s ease-in-out infinite;text-align:center;}
+@keyframes floatUpDown{0%,100%{transform:translateY(-50%);}50%{transform:translateY(calc(-50% - 6px));}}
+
+/* ── TASKS MINI ── */
+.task-mini-card{background:#050505;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:10px 12px;margin-bottom:8px;min-width:0;}
+.task-mini-card:last-child{margin-bottom:0;}
+.task-mini-row{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer;}
+.task-mini-row:active{opacity:.85;}
+.task-mini-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;box-shadow:0 0 5px rgba(227,6,19,0.5);align-self:center;}
+.task-mini-dot.done{background:var(--muted);box-shadow:none;}
+.task-mini-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;justify-content:center;}
+.task-mini-name{font-family:var(--font-ui);font-size:14px;font-weight:700;letter-spacing:var(--track-tight);text-transform:none;line-height:1.25;overflow-wrap:anywhere;word-break:break-word;}
+.task-mini-name.done{text-decoration:line-through;color:var(--muted);}
+.task-mini-time{font-family:var(--font-ui);font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--muted2);text-transform:none;}
+.task-mini-toggle{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--muted);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;line-height:1;transition:background .15s,border-color .15s,color .15s;}
+.task-mini-toggle:hover{background:rgba(255,255,255,0.06);}
+.task-mini-toggle.done{border-color:rgba(227,6,19,0.35);background:rgba(227,6,19,0.12);color:var(--red);}
+.task-mini-toggle span{font-size:14px;line-height:1;display:block;transform:translateY(0);}
+
+/* task detail modal — calendar */
+.task-detail-desc{width:100%;min-height:88px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:var(--font-ui);font-size:14px;font-weight:600;resize:vertical;margin-top:8px;box-sizing:border-box;}
+.task-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-top:16px;margin-bottom:10px;}
+.task-cal-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;}
+.task-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--muted);}
+.task-cal-dow{color:var(--muted);padding:4px 0;}
+.task-cal-cell{aspect-ratio:1;max-height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text);background:#0a0a0a;border:1px solid rgba(255,255,255,0.05);}
+.task-cal-cell.out{opacity:.25;}
+.task-cal-cell.today{border-color:rgba(227,6,19,0.45);}
+.task-cal-cell.done-day{background:rgba(227,6,19,0.18);border-color:rgba(227,6,19,0.4);color:var(--red);}
+
+/* ── CORE TASK EDIT INPUT ── */
+.core-edit-input{background:var(--surface2);border:1px solid rgba(227,6,19,0.3);border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--font-ui);font-size:15px;font-weight:600;letter-spacing:var(--track-tight);text-transform:none;outline:none;width:100%;transition:border-color .2s;}
+.core-edit-input:focus{border-color:rgba(227,6,19,0.5);box-shadow:0 0 0 2px rgba(227,6,19,0.08);}
+</style>
+</head>
+<body>
+<div class="noise-bg"></div>
+<div class="blood-vignette"></div>
+
+<div id="app">
+
+<!-- ══════════════ TOAST ══════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════ REGISTRATION SCREEN ══════════════ -->
+<div id="screen-reg" class="screen active">
+  <div class="reg-bg-lines"></div>
+  <div class="reg-content">
+    <div class="reg-logo" id="reg-logo-wrap">
+      <span id="reg-logo-emoji">⚡</span>
+    </div>
+    <div class="reg-title">THE<span style="color:var(--red);">BOYS</span></div>
+    <div class="reg-subtitle">Discipline Protocol</div>
+    
+    <!-- STEP 1: NAME -->
+    <div id="reg-step-1">
+      <div class="reg-step-label">Your name, soldier</div>
+      <input class="reg-input" id="reg-name" type="text" placeholder="Enter your name" maxlength="24" autocomplete="off"/>
+      <button class="btn-primary" style="width:100%;padding:15px;margin-top:4px;" onclick="regStep1()">NEXT →</button>
+    </div>
+    
+    <!-- STEP 2: TASKS -->
+    <div id="reg-step-2" style="display:none;">
+      <div class="reg-step-label" style="margin-bottom:6px;">Your daily tasks</div>
+      <div class="reg-step-note">Add 2–5 tasks for daily completion. <span style="color:var(--red);">First 2 cannot be deleted.</span></div>
+      <div id="reg-tasks-list"></div>
+      <div class="input-row">
+        <input class="add-task-input" id="reg-task-input" placeholder="Task name..." maxlength="40" style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')addRegTask()"/>
+        <button class="btn-primary btn-plus" id="reg-add-btn" onclick="addRegTask()"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="9" y1="2" x2="9" y2="16" stroke="white" stroke-width="2.2" stroke-linecap="round"/><line x1="2" y1="9" x2="16" y2="9" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      </div>
+      <button class="btn-primary" style="width:100%;padding:15px;margin-top:14px;" id="reg-start-btn" onclick="regStep2()" disabled>START PROTOCOL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ HOME SCREEN ══════════════ -->
+<div id="screen-home" class="screen">
+  <div class="app-header" style="padding-bottom:8px;">
+    <div class="header-inner">
+      <div class="header-title">DISCIPLINE<span style="color:#fff"> PROTOCOL</span></div>
+      <div class="header-sub" id="home-date-sub">The Boys · Power System</div>
+    </div>
+  </div>
+
+  <!-- HERO BANNER -->
+  <div class="home-hero" id="home-hero">
+    <div class="home-hero-tag"><span class="home-hero-tag-dot"></span>Агент активен</div>
+    <div class="home-hero-name" id="home-hero-name">—</div>
+    <div class="home-hero-sub" id="home-hero-sub">Начни свой первый день</div>
+    <div class="home-hero-portrait" id="home-hero-portrait">⚡</div>
+  </div>
+
+  <div class="content">
+    <!-- STATS -->
+    <div class="stat-row" style="margin-bottom:10px;">
+      <div class="stat-chip highlight">
+        <div class="stat-chip-icon" aria-hidden="true">⚡</div>
+        <div class="stat-val red" id="home-power">0</div>
+        <div class="stat-label">Сила</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-icon" aria-hidden="true">🔥</div>
+        <div class="stat-val" id="home-streak">0</div>
+        <div class="stat-label">Стрик</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-icon" aria-hidden="true">⚗️</div>
+        <div class="stat-val" id="home-v">0</div>
+        <div class="stat-label">Сыв.&nbsp;V</div>
+      </div>
+      <div class="stat-chip chip-gold">
+        <div class="stat-chip-icon" aria-hidden="true">🧬</div>
+        <div class="stat-val gold" id="home-v1">0</div>
+        <div class="stat-label">V1</div>
+      </div>
+    </div>
+
+    <!-- NEXT BOSS -->
+    <div id="home-next-boss" class="card" style="margin-bottom:10px;display:none;">
+      <div class="home-boss-row">
+        <div class="row-fixed" id="home-boss-avatar" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:26px;line-height:1;">💀</div>
+        <div class="home-boss-main">
+          <div class="home-boss-kicker">Следующий враг</div>
+          <div id="home-boss-name"></div>
+          <div id="home-boss-req"></div>
+        </div>
+        <div class="home-boss-side">
+          <div class="prog-track">
+            <div class="prog-fill" id="home-boss-prog" style="width:0%"></div>
+          </div>
+          <div style="font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-top:4px;line-height:1.2;" id="home-boss-pct"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS SECTION -->
+    <div class="card" style="margin-bottom:10px;" id="home-tasks-card">
+      <div class="card-head">
+        <div class="card-head-title">TASKS <span style="color:var(--red);">TODAY</span></div>
+        <div class="card-head-meta" id="home-tasks-count">0/0</div>
+      </div>
+      <div id="home-tasks-mini"></div>
+    </div>
+
+    <!-- CHECK BUTTON -->
+    <button class="big-check-btn disabled" id="home-check-btn" onclick="checkToday()">
+      <span id="home-check-text">ОТМЕТИТЬ СЕГОДНЯШНИЙ ДЕНЬ</span>
+    </button>
+
+    <!-- LAST 7 DAYS -->
+    <div style="margin-top:14px;margin-bottom:4px;">
+      <div style="font-family:var(--font-ui);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Последние 7 дней</div>
+      <div id="home-week" class="week-row"></div>
+    </div>
+
+    <!-- COMPOUND V INFO -->
+    <div class="card" style="margin-top:14px;">
+      <div class="compound-row">
+        <div class="compound-emoji" aria-hidden="true">⚗️</div>
+        <div class="compound-body">
+          <div class="compound-title">Compound V</div>
+          <div class="compound-desc">За каждый 2-дневный стрик — +1V. V1 доступна после 4-го босса.</div>
+        </div>
+        <div class="compound-num" id="home-v-big">0</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ TASKS SCREEN ══════════════ -->
+<div id="screen-tasks" class="screen">
+  <div class="app-header">
+    <div class="header-title">MY <span style="color:var(--red);">TASKS</span></div>
+    <div class="header-sub">Daily discipline</div>
+  </div>
+  <div class="content">
+    <div id="tasks-list-full" style="margin-bottom:14px;"></div>
+    
+    <!-- Add task area -->
+    <div class="card" style="margin-bottom:10px;" id="tasks-add-area">
+      <div style="font-family:var(--font-ui);font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Add task</div>
+      <div class="input-row">
+        <input class="add-task-input" id="new-task-input" placeholder="Task name..." maxlength="40" style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')addTask()"/>
+        <button class="btn-primary btn-plus" id="add-task-btn" onclick="addTask()"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="9" y1="2" x2="9" y2="16" stroke="white" stroke-width="2.2" stroke-linecap="round"/><line x1="2" y1="9" x2="16" y2="9" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      </div>
+    </div>
+    
+    <div class="divider-red"></div>
+    <div style="font-family:var(--font-ui);font-size:10px;letter-spacing:1.5px;color:var(--muted);text-align:center;margin-top:8px;">TASKS COUNT TOWARD DAILY STREAK</div>
+  </div>
+</div>
+
+<!-- ══════════════ ABILITIES SCREEN ══════════════ -->
+<div id="screen-abilities" class="screen">
+  <div class="app-header">
+    <div class="header-title">ABILITIES</div>
+    <div class="header-sub" id="ab-class-subtitle">Choose your class</div>
+  </div>
+  <div class="content" id="abilities-content">
+  </div>
+</div>
+
+<!-- ══════════════ BOSSES SCREEN ══════════════ -->
+<div id="screen-bosses" class="screen">
+  <div class="app-header">
+    <div class="header-title">ENEMIES <span style="color:var(--red);">OF POWER</span></div>
+    <div class="header-sub">The Seven awaits you</div>
+  </div>
+  <div class="content" id="bosses-content">
+  </div>
+</div>
+
+<!-- ══════════════ CLASS SELECT SCREEN ══════════════ -->
+<div id="screen-class" class="screen" style="padding-bottom:40px;">
+  <div class="app-header">
+    <div class="header-title">ВЫБОР <span style="color:var(--red);">КЛАССА</span></div>
+    <div class="header-sub">Compound V изменит тебя навсегда</div>
+  </div>
+  <div class="content">
+    <div class="card-red" style="margin-bottom:14px;padding:13px 15px;">
+      <div style="font-family:var(--font-ui);font-size:13px;color:var(--muted2);line-height:1.5;">⚗️ У тебя есть <span style="color:var(--red);font-weight:700;" id="class-v-count">1</span> доза Compound V. Выбери суперспособность — это решение <span style="color:var(--text);">необратимо.</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="class-grid">
+    </div>
+    <button class="btn-primary" id="class-confirm-btn" onclick="confirmClass()" style="width:100%;padding:15px;margin-top:14px;display:none;">ПРИНЯТЬ COMPOUND V</button>
+  </div>
+</div>
+
+<!-- ══════════════ TAB BAR ══════════════ -->
+<div class="tab-bar" id="main-tab-bar">
+  <div class="tab-btn active" id="tab-home" onclick="navigate('home')">
+    <div class="tab-icon">⚡</div>
+    <div class="tab-label">Главная</div>
+  </div>
+  <div class="tab-btn" id="tab-tasks" onclick="navigate('tasks')">
+    <div class="tab-icon">📋</div>
+    <div class="tab-label">Задачи</div>
+  </div>
+  <div class="tab-btn" id="tab-abilities" onclick="navigate('abilities')">
+    <div class="tab-icon">🧬</div>
+    <div class="tab-label">Способности</div>
+  </div>
+  <div class="tab-btn" id="tab-bosses" onclick="navigate('bosses')">
+    <div class="tab-icon">💀</div>
+    <div class="tab-label">Боссы</div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- ══════════════ MODAL CONTAINER ══════════════ -->
+<div id="modal-container"></div>
+
+<script>
+/* ═══════════════════════════════════════
+   TELEGRAM INIT
+═══════════════════════════════════════ */
+if (window.Telegram && window.Telegram.WebApp) {
+  const tg = window.Telegram.WebApp;
+  tg.ready(); tg.expand();
+  tg.setHeaderColor('#050505');
+  tg.setBackgroundColor('#050505');
+}
+
+/* ═══════════════════════════════════════
+   DATA DEFINITIONS
+═══════════════════════════════════════ */
+const CLASSES = {
+  Brute:       { emoji:'💪', desc:'Грубая физическая мощь. Тело — оружие.' },
+  Speedster:   { emoji:'⚡', desc:'Скорость превыше всего. Ты быстрее пули.' },
+  Shadow:      { emoji:'🌑', desc:'Тьма — твой дом. Молчание — твой стиль.' },
+  Regenerator: { emoji:'🩸', desc:'Ты бессмертен. Боль — лишь данные.' },
+  Psyche:      { emoji:'🧠', desc:'Разум острее любого клинка.' }
+};
+
+const ABILITIES = {
+  Brute: [
+    { id:'b1',  name:'Super Strength I',   cost:{v:1},  power:8,  desc:'Первый шаг к сверхсиле.' },
+    { id:'b2',  name:'Enhanced Muscles',   cost:{v:2},  power:12, desc:'Каждый удар — сокрушительный.' },
+    { id:'b3',  name:'Heavy Impact',       cost:{v:3},  power:18, desc:'Удары оставляют кратеры.' },
+    { id:'b4',  name:'Durability',         cost:{v:3},  power:15, desc:'Кожа твёрже броневой стали.' },
+    { id:'b5',  name:'Rage Mode',          cost:{v:4},  power:22, desc:'В ярости удваиваешь силу.' },
+    { id:'b6',  name:'Heat Vision',        cost:{v:5},  power:25, desc:'Глаза испускают тепловые лучи.' },
+    { id:'b7',  name:'Flight',             cost:{v:6},  power:30, desc:'Земля больше не держит тебя.' },
+    { id:'b8',  name:'Laser Mastery',      cost:{v1:1}, power:45, desc:'Абсолютный контроль лазерного взгляда.' },
+    { id:'b9',  name:'God Strength',       cost:{v1:2}, power:60, desc:'Сила, способная разорвать планету.' },
+    { id:'b10', name:'Homelander Legacy',  cost:{v1:3}, power:80, desc:'Ты — наследник самого Хоумлендера.' },
+  ],
+  Speedster: [
+    { id:'s1',  name:'Super Speed I',      cost:{v:1},  power:10, desc:'Ты движешься быстрее глаза.' },
+    { id:'s2',  name:'Quick Reflexes',     cost:{v:2},  power:14, desc:'Реакция быстрее молнии.' },
+    { id:'s3',  name:'Phasing',            cost:{v:3},  power:20, desc:'Проходишь сквозь объекты.' },
+    { id:'s4',  name:'Sonic Boom',         cost:{v:4},  power:23, desc:'Бег создаёт звуковой удар.' },
+    { id:'s5',  name:'Time Perception',    cost:{v:4},  power:25, desc:'Видишь мир в замедлении.' },
+    { id:'s6',  name:'Lightning Dash',     cost:{v:5},  power:28, desc:'Мгновенные перемещения.' },
+    { id:'s7',  name:'Speed Force',        cost:{v:6},  power:35, desc:'Черпаешь силу из потока времени.' },
+    { id:'s8',  name:'Infinite Velocity',  cost:{v1:1}, power:50, desc:'Скорость за пределами физики.' },
+    { id:'s9',  name:'Temporal Shift',     cost:{v1:2}, power:65, desc:'Можешь отматывать моменты.' },
+    { id:'s10', name:'Godspeed',           cost:{v1:3}, power:85, desc:'Быстрее света. Быстрее смерти.' },
+  ],
+  Shadow: [
+    { id:'sh1', name:'Invisibility I',     cost:{v:1},  power:9,  desc:'Становишься невидимым.' },
+    { id:'sh2', name:'Silent Steps',       cost:{v:2},  power:13, desc:'Абсолютная тишина движений.' },
+    { id:'sh3', name:'Shadow Blend',       cost:{v:3},  power:17, desc:'Сливаешься с тьмой.' },
+    { id:'sh4', name:'Assassination',      cost:{v:3},  power:20, desc:'Мастерство убийства из тени.' },
+    { id:'sh5', name:'Enhanced Agility',   cost:{v:4},  power:22, desc:'Движения как у акробата-бога.' },
+    { id:'sh6', name:'Poison Immunity',    cost:{v:4},  power:18, desc:'Любые яды для тебя — вода.' },
+    { id:'sh7', name:'Shadow Clone',       cost:{v:5},  power:26, desc:'Создаёшь иллюзорных двойников.' },
+    { id:'sh8', name:'Perfect Camouflage', cost:{v1:1}, power:48, desc:'Полное исчезновение на свету.' },
+    { id:'sh9', name:'Void Step',          cost:{v1:2}, power:62, desc:'Телепортация через тьму.' },
+    { id:'sh10',name:'Ghost Protocol',     cost:{v1:3}, power:80, desc:'Существуешь вне реальности.' },
+  ],
+  Regenerator: [
+    { id:'r1',  name:'Fast Healing',         cost:{v:1},  power:8,  desc:'Раны затягиваются за секунды.' },
+    { id:'r2',  name:'Pain Resistance',      cost:{v:2},  power:12, desc:'Боль не имеет власти.' },
+    { id:'r3',  name:'Broken Bone Recovery', cost:{v:3},  power:16, desc:'Переломы срастаются мгновенно.' },
+    { id:'r4',  name:'Blood Regeneration',   cost:{v:3},  power:19, desc:'Кровь восполняется в реальном времени.' },
+    { id:'r5',  name:'Limb Regrowth',        cost:{v:5},  power:28, desc:'Утраченные конечности отрастают.' },
+    { id:'r6',  name:'Toxicity Immunity',    cost:{v:4},  power:22, desc:'Любые токсины нейтрализуются.' },
+    { id:'r7',  name:'Immortal Flesh',       cost:{v:6},  power:35, desc:'Регенерирует быстрее, чем разрушают.' },
+    { id:'r8',  name:'Rapid Revival',        cost:{v1:1}, power:55, desc:'Возврат из клинической смерти.' },
+    { id:'r9',  name:'Adamantium Bones',     cost:{v1:2}, power:70, desc:'Кости прочнее любого металла.' },
+    { id:'r10', name:'True Immortal',        cost:{v1:3}, power:90, desc:'Смерть — лишь временное неудобство.' },
+  ],
+  Psyche: [
+    { id:'p1',  name:'Charisma Boost',         cost:{v:1},  power:7,  desc:'Убеждаешь кого угодно.' },
+    { id:'p2',  name:'Emotion Sense',          cost:{v:2},  power:11, desc:'Читаешь эмоции как книгу.' },
+    { id:'p3',  name:'Mind Control I',         cost:{v:3},  power:18, desc:'Базовое управление разумом.' },
+    { id:'p4',  name:'Telepathy',              cost:{v:4},  power:23, desc:'Слышишь мысли на расстоянии.' },
+    { id:'p5',  name:'Fear Induction',         cost:{v:4},  power:20, desc:'Вызываешь парализующий страх.' },
+    { id:'p6',  name:'Memory Manipulation',    cost:{v:5},  power:27, desc:'Стираешь воспоминания.' },
+    { id:'p7',  name:'Telekinesis',            cost:{v:6},  power:32, desc:'Двигаешь предметы силой мысли.' },
+    { id:'p8',  name:'Mass Suggestion',        cost:{v1:1}, power:50, desc:'Контролируешь толпы разумом.' },
+    { id:'p9',  name:'Reality Warping (weak)', cost:{v1:2}, power:68, desc:'Искажаешь реальность.' },
+    { id:'p10', name:'God Mind',               cost:{v1:3}, power:88, desc:'Сознание охватывает всё.' },
+  ]
+};
+
+/* ═══ BOSSES ═══
+   reqPower = минимум силы ОБЯЗАТЕЛЕН для начала боя
+   V1 даётся только начиная с boss index 4 (Queen Maeve, index=3 → 4-й по счёту)
+   Первые 3 босса дают обычный V, боссы 4-6 дают V1
+═══════════════ */
+const BOSSES = [
+  { id:'translucent', name:'Translucent',  emoji:'👻', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Suburbicon_02_%2836379741244%29_%28cropped-J1%29.jpg/330px-Suburbicon_02_%2836379741244%29_%28cropped-J1%29.jpg', reqPower:15,  reqStreak:5,  reward:{v:2},  desc:'Невидимый, но хрупкий внутри.' },
+  { id:'thedeep',     name:'The Deep',     emoji:'🐙', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/3_-_Chace_Crawford_-_Gossip_Girl_Fan_Meet_-_March_31%2C_2024_at_the_XOXO_Fan_Meet_by_People_Convention_%28Portrait%29_%28cropped%29.jpg/330px-3_-_Chace_Crawford_-_Gossip_Girl_Fan_Meet_-_March_31%2C_2024_at_the_XOXO_Fan_Meet_by_People_Convention_%28Portrait%29_%28cropped%29.jpg', reqPower:35,  reqStreak:7,  reward:{v:3},  desc:'Властелин морских глубин.' },
+  { id:'atrain',      name:'A-Train',      emoji:'🚄', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Jessie_T._Usher_at_53rd_Saturn_Awards_2026.jpg/330px-Jessie_T._Usher_at_53rd_Saturn_Awards_2026.jpg', reqPower:70,  reqStreak:9,  reward:{v:4},  desc:'Быстрее. Только не быстрее тебя.' },
+  { id:'queenmaeve',  name:'Queen Maeve',  emoji:'⚔️', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Dominique-McElligott.jpg/330px-Dominique-McElligott.jpg', reqPower:120, reqStreak:11, reward:{v1:2}, desc:'Принципиальная и беспощадная. (Доступна V1!)' },
+  { id:'soldierboy',  name:'Soldier Boy',  emoji:'🇺🇸', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Misha_Collins_%26_Jensen_Ackles_%2848478258422%29%28c%29.jpg/330px-Misha_Collins_%26_Jensen_Ackles_%2848478258422%29%28c%29.jpg', reqPower:200, reqStreak:13, reward:{v1:3}, desc:'Легенда прошлого века. Опасен.' },
+  { id:'homelander',  name:'Homelander',   emoji:'🦅', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Antony_Starr_Photo_Op_GalaxyCon_Oklahoma_City_2024.jpg/330px-Antony_Starr_Photo_Op_GalaxyCon_Oklahoma_City_2024.jpg', reqPower:350, reqStreak:14, reward:{v1:5}, desc:'Самый сильный в мире. Пока.' },
+];
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+const DEFAULT_STATE = {
+  registered: false,
+  playerName: '',
+  tasks: [],
+  tasksDoneHistory: {},
+  taskDoneAt: {},
+  days: {},
+  streak: 0,
+  maxStreak: 0,
+  dp: 0,
+  compoundV: 1,
+  v1: 0,
+  power: 0,
+  playerClass: null,
+  ownedAbilities: [],
+  defeatedBosses: [],
+  hasTitle: false,
+  pendingClassSelect: false,
+  lastCheckedDate: null,
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('tbp_state_v3');
+    if (raw) {
+      const s = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+      if (!s.taskDoneAt || typeof s.taskDoneAt !== 'object') s.taskDoneAt = {};
+      if (Array.isArray(s.tasks)) {
+        s.tasks.forEach(t => { if (typeof t.description !== 'string') t.description = ''; });
+      }
+      return s;
+    }
+    // Try old key for migration
+    const oldRaw = localStorage.getItem('tbp_state_v2');
+    if (oldRaw) {
+      const old = Object.assign({}, DEFAULT_STATE, JSON.parse(oldRaw));
+      if (!old.taskDoneAt || typeof old.taskDoneAt !== 'object') old.taskDoneAt = {};
+      if (Array.isArray(old.tasks)) {
+        old.tasks.forEach(t => { if (typeof t.description !== 'string') t.description = ''; });
+      }
+      return old;
+    }
+  } catch(e) {}
+  return Object.assign({}, DEFAULT_STATE);
+}
+
+function saveState() {
+  localStorage.setItem('tbp_state_v3', JSON.stringify(state));
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function bossAvatarMarkup(boss, isLockedBoss) {
+  if (isLockedBoss) return '🔒';
+  if (boss.photo) {
+    const pos = boss.id === 'soldierboy' ? ' style="object-position:85% 22%;"' : '';
+    return `<img class="boss-face"${pos} src="${boss.photo}" alt="" decoding="async" data-fb="${encodeURIComponent(boss.emoji)}" onerror="var s=decodeURIComponent(this.getAttribute('data-fb'));this.replaceWith(Object.assign(document.createElement('span'),{textContent:s,style:'font-size:28px;line-height:1'}))"/>`;
+  }
+  return boss.emoji;
+}
+
+function fightBossFaceBlock(boss) {
+  if (boss.photo) {
+    const pos = boss.id === 'soldierboy' ? 'object-position:85% 22%;' : '';
+    return `<img src="${boss.photo}" alt="" style="${pos}width:min(140px,36vw);height:min(140px,36vw);object-fit:cover;border-radius:16px;border:2px solid rgba(255,255,255,0.12);margin-bottom:16px;box-shadow:0 0 24px rgba(0,0,0,0.6);"/>`;
+  }
+  return `<div style="font-size:60px;margin-bottom:16px;">${boss.emoji}</div>`;
+}
+
+function formatDoneClock(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return ''; }
+}
+
+let taskDetailModalTaskId = null;
+let taskDetailCalMonth = null;
+
+function openTaskDetailModal(taskId) {
+  if (!state.tasks.some(t => t.id === taskId)) return;
+  hideModal();
+  taskDetailModalTaskId = taskId;
+  taskDetailCalMonth = new Date();
+  taskDetailCalMonth.setDate(1);
+  taskDetailCalMonth.setHours(12, 0, 0, 0);
+  renderTaskDetailModal();
+}
+
+function taskDetailCalShift(delta) {
+  if (!taskDetailCalMonth) return;
+  taskDetailCalMonth.setMonth(taskDetailCalMonth.getMonth() + delta);
+  renderTaskDetailModal();
+}
+
+function buildTaskCalendarHtml(taskId, viewDate) {
+  const y = viewDate.getFullYear();
+  const m = viewDate.getMonth();
+  const todayK = todayStr();
+  const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  let html = `<div class="task-cal-nav"><button type="button" onclick="taskDetailCalShift(-1)">←</button><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;">${MONTHS_RU[m]} ${y}</span><button type="button" onclick="taskDetailCalShift(1)">→</button></div>`;
+  html += '<div class="task-cal-grid">';
+  DOW.forEach(function (d) { html += '<div class="task-cal-dow">' + d + '</div>'; });
+  const first = new Date(y, m, 1);
+  const pad = (first.getDay() + 6) % 7;
+  let i;
+  for (i = 0; i < pad; i++) html += '<div class="task-cal-cell out"></div>';
+  const dim = new Date(y, m + 1, 0).getDate();
+  for (i = 1; i <= dim; i++) {
+    const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(i).padStart(2, '0');
+    const done = (state.tasksDoneHistory[key] || []).indexOf(taskId) >= 0;
+    const isToday = key === todayK;
+    let cls = 'task-cal-cell';
+    if (done) cls += ' done-day';
+    if (isToday) cls += ' today';
+    html += '<div class="' + cls + '">' + i + '</div>';
+  }
+  html += '</div>';
+  html += '<div style="font-family:var(--font-ui);font-size:10px;color:var(--muted);margin-top:10px;line-height:1.35;">Красная ячейка — задача отмечена выполненной в этот день (вкладка «Задачи» или галочка на главной).</div>';
+  return html;
+}
+
+function renderTaskDetailModal() {
+  const task = state.tasks.find(function (t) { return t.id === taskDetailModalTaskId; });
+  const container = document.getElementById('modal-container');
+  if (!task) { hideModal(); return; }
+  const nameEsc = escapeHtml(task.name);
+  const cal = buildTaskCalendarHtml(task.id, taskDetailCalMonth);
+  const descVal = typeof task.description === 'string' ? task.description : '';
+  container.innerHTML =
+    '<div class="modal-overlay" onclick="if(event.target===this)hideModal()">' +
+    '<div class="modal-box">' +
+    '<div class="modal-title" style="margin-bottom:10px;">' + nameEsc + '</div>' +
+    '<div style="font-family:var(--font-ui);font-size:11px;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;">Описание</div>' +
+    '<textarea id="task-detail-desc" class="task-detail-desc" maxlength="800" placeholder="Заметки к задаче..."></textarea>' +
+    '<div style="font-family:var(--font-ui);font-size:11px;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;">История отметок · календарь</div>' +
+    cal +
+    '<div class="modal-actions" style="margin-top:28px;padding-bottom:8px;">' +
+    '<button class="btn-secondary" style="flex:1;padding:14px;" onclick="hideModal()">CLOSE</button>' +
+    '<button class="btn-primary" style="flex:1;padding:14px;" onclick="saveTaskDetailFromModal()">SAVE</button>' +
+    '</div></div></div>';
+  const ta = document.getElementById('task-detail-desc');
+  if (ta) ta.value = descVal;
+}
+
+function saveTaskDetailFromModal() {
+  const task = state.tasks.find(function (t) { return t.id === taskDetailModalTaskId; });
+  const ta = document.getElementById('task-detail-desc');
+  if (task && ta) task.description = ta.value.slice(0, 800);
+  saveState();
+  hideModal();
+  renderHome();
+  if (currentScreen === 'tasks') renderTasksFull();
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function dateStrFromOffset(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function recalcStreak() {
+  const today = todayStr();
+  // If today not checked → streak 0 (no mercy!)
+  if (!state.days[today]) return 0;
+  let streak = 1;
+  let d = new Date();
+  d.setDate(d.getDate() - 1);
+  while (true) {
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    if (state.days[key]) { streak++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+/* ═══════════════════════════════════════
+   STREAK RESET CHECK — No mercy version
+   If you missed even 1 day, streak dies
+═══════════════════════════════════════ */
+function checkStreakReset() {
+  const today = todayStr();
+  const yesterday = dateStrFromOffset(-1);
+  const lastCheck = state.lastCheckedDate;
+
+  // If last check was before yesterday (or null and today not checked) → reset
+  if (lastCheck && lastCheck !== today && lastCheck !== yesterday) {
+    // More than 1 day ago → definite reset
+    state.streak = 0;
+    saveState();
+  } else if (!lastCheck && !state.days[today]) {
+    state.streak = 0;
+    saveState();
+  } else {
+    // Recalculate properly
+    const newStreak = recalcStreak();
+    if (newStreak !== state.streak) {
+      state.streak = newStreak;
+      saveState();
+    }
+  }
+}
+
+/* ═══════════════════════════════════════
+   REGISTRATION
+═══════════════════════════════════════ */
+let regTasks = [];
+
+function regStep1() {
+  const val = document.getElementById('reg-name').value.trim();
+  if (!val) {
+    const inp = document.getElementById('reg-name');
+    inp.style.borderColor = 'var(--red)';
+    inp.focus();
+    setTimeout(() => inp.style.borderColor = '', 1200);
+    return;
+  }
+  document.getElementById('reg-step-1').style.display = 'none';
+  document.getElementById('reg-step-2').style.display = 'block';
+  document.getElementById('reg-task-input').focus();
+  renderRegTasks();
+}
+
+function renderRegTasks() {
+  const list = document.getElementById('reg-tasks-list');
+  list.innerHTML = '';
+  regTasks.forEach((t, i) => {
+    const isCore = i < 2; // first 2 are core — can't delete
+    list.innerHTML += `
+      <div class="reg-task-row" style="display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border:1px solid ${isCore ? 'rgba(227,6,19,0.2)' : 'var(--border)'};border-radius:10px;padding:11px 12px;margin-bottom:8px;min-width:0;">
+        <div style="font-family:var(--font-display);font-size:15px;color:var(--red);min-width:22px;flex-shrink:0;line-height:1.3;">${i+1}</div>
+        <div style="font-family:var(--font-ui);font-size:14px;flex:1;min-width:0;line-height:1.35;overflow-wrap:anywhere;word-break:break-word;">${t}</div>
+        ${isCore
+          ? `<span style="font-family:var(--font-ui);font-size:10px;letter-spacing:1px;color:var(--red);border:1px solid var(--border-red);border-radius:4px;padding:2px 5px;">CORE</span>`
+          : `<button onclick="removeRegTask(${i})" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;opacity:.6;">✕</button>`
+        }
+      </div>`;
+  });
+
+  const btn = document.getElementById('reg-start-btn');
+  btn.disabled = regTasks.length < 2;
+  btn.style.opacity = regTasks.length < 2 ? '.4' : '1';
+
+  const addBtn = document.getElementById('reg-add-btn');
+  addBtn.disabled = regTasks.length >= 5;
+  addBtn.style.opacity = regTasks.length >= 5 ? '.4' : '1';
+
+  const input = document.getElementById('reg-task-input');
+  input.disabled = regTasks.length >= 5;
+  if (regTasks.length >= 5) input.placeholder = 'Максимум 5 задач';
+  else if (regTasks.length < 2) input.placeholder = 'Добавь ещё ' + (2 - regTasks.length) + ' задачу...';
+  else input.placeholder = 'Название задачи...';
+}
+
+function addRegTask() {
+  if (regTasks.length >= 5) return;
+  const inp = document.getElementById('reg-task-input');
+  const val = inp.value.trim();
+  if (!val) { inp.focus(); return; }
+  regTasks.push(val);
+  inp.value = '';
+  renderRegTasks();
+  inp.focus();
+}
+
+function removeRegTask(i) {
+  if (i < 2) { showToast('Первые 2 задачи нельзя удалить!', false); return; }
+  regTasks.splice(i, 1);
+  renderRegTasks();
+}
+
+function regStep2() {
+  if (regTasks.length < 2) return;
+  const name = document.getElementById('reg-name').value.trim();
+
+  state.playerName = name;
+  state.registered = true;
+  // First 2 are core (undeletable), rest are normal
+  state.tasks = regTasks.map((t, i) => ({ id: 'task_' + Date.now() + '_' + i, name: t, core: i < 2, description: '' }));
+  state.compoundV = 2;
+  saveState();
+
+  showUnlockPopup('⚡', 'ДОБРО\nПОЖАЛОВАТЬ', name.toUpperCase() + ' — ПРОТОКОЛ АКТИВИРОВАН', () => {
+    navigateRaw('home');
+    showToast('⚗️ Получено 2 сыворотки V!', true);
+  });
+}
+
+document.getElementById('reg-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') regStep1();
+});
+
+/* ═══════════════════════════════════════
+   TASKS MANAGEMENT
+═══════════════════════════════════════ */
+function getTodayTasksDone() {
+  const today = todayStr();
+  return state.tasksDoneHistory[today] || [];
+}
+
+function toggleTaskToday(taskId) {
+  const today = todayStr();
+  if (!state.tasksDoneHistory[today]) state.tasksDoneHistory[today] = [];
+  if (!state.taskDoneAt[today]) state.taskDoneAt[today] = {};
+  const idx = state.tasksDoneHistory[today].indexOf(taskId);
+  if (idx >= 0) {
+    state.tasksDoneHistory[today].splice(idx, 1);
+    delete state.taskDoneAt[today][taskId];
+  } else {
+    state.tasksDoneHistory[today].push(taskId);
+    state.taskDoneAt[today][taskId] = new Date().toISOString();
+  }
+  saveState();
+  renderHome();
+  if (currentScreen === 'tasks') renderTasksFull();
+}
+
+function addTask() {
+  if (state.tasks.length >= 10) { showToast('Максимум 10 задач!', false); return; }
+  const inp = document.getElementById('new-task-input');
+  const val = inp.value.trim();
+  if (!val) { inp.focus(); return; }
+  state.tasks.push({ id: 'task_' + Date.now(), name: val, core: false, description: '' });
+  inp.value = '';
+  saveState();
+  renderTasksFull();
+  renderHome();
+}
+
+function deleteTask(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (task.core) {
+    showToast('🔒 Основные задачи нельзя удалить!', false);
+    return;
+  }
+  state.tasks = state.tasks.filter(t => t.id !== taskId);
+  Object.keys(state.tasksDoneHistory).forEach(d => {
+    state.tasksDoneHistory[d] = state.tasksDoneHistory[d].filter(id => id !== taskId);
+  });
+  Object.keys(state.taskDoneAt).forEach(d => {
+    if (state.taskDoneAt[d] && state.taskDoneAt[d][taskId]) delete state.taskDoneAt[d][taskId];
+  });
+  saveState();
+  renderTasksFull();
+  renderHome();
+}
+
+function editCoreTask(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  // Build inline edit modal
+  showModal(
+    '✏️ Редактировать задачу',
+    `<input id="modal-task-edit-input" class="core-edit-input" type="text" maxlength="40" value="${task.name}" placeholder="Название задачи"/>`,
+    [
+      { label: 'Отмена', style: 'secondary', action: hideModal },
+      { label: 'Сохранить', style: 'primary', action: () => {
+          const val = document.getElementById('modal-task-edit-input')?.value.trim();
+          if (val) {
+            task.name = val;
+            saveState();
+            renderTasksFull();
+            renderHome();
+          }
+          hideModal();
+        }
+      }
+    ]
+  );
+  setTimeout(() => {
+    const inp = document.getElementById('modal-task-edit-input');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 80);
+}
+
+function renderTasksFull() {
+  const list = document.getElementById('tasks-list-full');
+  const doneTodayIds = getTodayTasksDone();
+
+  if (!state.tasks.length) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted2);font-family:var(--font-ui);font-size:16px;">Нет задач. Добавь ниже.</div>`;
+    return;
+  }
+
+  let html = '';
+  state.tasks.forEach(t => {
+    const done = doneTodayIds.includes(t.id);
+    const isCore = !!t.core;
+    const nameEsc = escapeHtml(t.name);
+    html += `
+      <div class="task-item ${done ? 'done-task' : ''}">
+        <div class="task-check ${done ? 'checked' : ''}" onclick="toggleTaskToday('${t.id}')">
+          ${done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+        <div class="task-name ${done ? 'done-text' : ''}" onclick="openTaskDetailModal('${t.id}')" style="cursor:pointer;">${nameEsc}</div>
+        ${isCore
+          ? `<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+               <span style="font-family:var(--font-ui);font-size:10px;letter-spacing:1px;color:var(--red);border:1px solid var(--border-red);border-radius:4px;padding:2px 5px;">CORE</span>
+               <button onclick="event.stopPropagation();editCoreTask('${t.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--muted2);cursor:pointer;font-size:12px;padding:3px 7px;font-family:var(--font-ui);letter-spacing:.5px;">✏️</button>
+             </div>`
+          : `<button onclick="event.stopPropagation();deleteTask('${t.id}')" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 8px;opacity:.45;flex-shrink:0;">✕</button>`
+        }
+      </div>`;
+  });
+  list.innerHTML = html;
+
+  const addArea = document.getElementById('tasks-add-area');
+  if (state.tasks.length >= 10) {
+    document.getElementById('new-task-input').disabled = true;
+    document.getElementById('new-task-input').placeholder = 'Максимум 10 задач';
+    document.getElementById('add-task-btn').disabled = true;
+    document.getElementById('add-task-btn').style.opacity = '.4';
+  } else {
+    document.getElementById('new-task-input').disabled = false;
+    document.getElementById('new-task-input').placeholder = 'Название задачи...';
+    document.getElementById('add-task-btn').disabled = false;
+    document.getElementById('add-task-btn').style.opacity = '1';
+  }
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+let currentScreen = 'reg';
+
+function navigate(screen) {
+  if (screen === currentScreen) return;
+  if (screen !== 'class' && state.pendingClassSelect) {
+    showToast('Сначала выбери класс!', false);
+    navigateRaw('class');
+    return;
+  }
+  navigateRaw(screen);
+}
+
+function navigateRaw(screen) {
+  const prev = document.getElementById('screen-' + currentScreen);
+  if (prev) { prev.classList.remove('active'); prev.classList.add('exit'); setTimeout(() => prev.classList.remove('exit'), 350); }
+  const next = document.getElementById('screen-' + screen);
+  if (next) { next.classList.add('active'); }
+  currentScreen = screen;
+
+  const tabBar = document.getElementById('main-tab-bar');
+  const noTabScreens = ['reg', 'class'];
+  tabBar.style.display = noTabScreens.includes(screen) ? 'none' : 'flex';
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const tabEl = document.getElementById('tab-' + screen);
+  if (tabEl) tabEl.classList.add('active');
+
+  if (screen === 'home') renderHome();
+  if (screen === 'tasks') renderTasksFull();
+  if (screen === 'abilities') renderAbilities();
+  if (screen === 'bosses') renderBosses();
+  if (screen === 'class') renderClassSelect();
+}
+
+/* ═══════════════════════════════════════
+   CHECK TODAY — Streak & V reward logic
+
+   Rules:
+   - V1 доступна только после победы над 4+ боссами (index >=3)
+   - За каждый 2-дневный стрик (streak кратен 2) → +1V обычный
+   - Если пропустил день → streak 0 без пощады
+═══════════════════════════════════════ */
+function checkToday() {
+  const today = todayStr();
+  if (state.days[today]) return;
+
+  state.days[today] = true;
+  state.lastCheckedDate = today;
+  state.dp++;
+
+  const newStreak = recalcStreak();
+  state.streak = newStreak;
+  if (newStreak > state.maxStreak) state.maxStreak = newStreak;
+
+  // V reward: give regular Compound V for every 2-day streak milestone
+  let gotV = false;
+  if (newStreak >= 2 && newStreak % 2 === 0) {
+    state.compoundV++;
+    gotV = true;
+  }
+
+  saveState();
+
+  if (window.Telegram?.WebApp?.HapticFeedback) {
+    window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+  }
+
+  // Class select unlock
+  if (!state.playerClass && !state.pendingClassSelect && state.compoundV >= 1) {
+    state.pendingClassSelect = true;
+    saveState();
+    showUnlockPopup('⚗️', 'COMPOUND V\nРАЗБЛОКИРОВАН', 'Выбери свой класс', () => {
+      navigateRaw('class');
+    });
+    return;
+  }
+
+  renderHome();
+  if (gotV) showToast('⚗️ +1 Compound V! (Стрик ' + newStreak + ' дней)', true);
+  else showToast('✅ День отмечен! Стрик: ' + newStreak, false);
+}
+
+/* ═══════════════════════════════════════
+   RENDER HOME
+═══════════════════════════════════════ */
+function renderHome() {
+  const today = todayStr();
+  const checked = !!state.days[today];
+  const streak = recalcStreak();
+  state.streak = streak;
+
+  const now = new Date();
+  const DAYS_RU2 = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  const MONTHS_RU2 = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  document.getElementById('home-date-sub').textContent = DAYS_RU2[now.getDay()] + ', ' + now.getDate() + ' ' + MONTHS_RU2[now.getMonth()];
+
+  document.getElementById('home-hero-name').textContent = state.playerName || 'Боец';
+  if (state.playerClass) {
+    document.getElementById('home-hero-sub').textContent = state.playerClass.toUpperCase() + ' · Сила ' + state.power;
+    document.getElementById('home-hero-portrait').textContent = CLASSES[state.playerClass].emoji;
+  } else {
+    document.getElementById('home-hero-sub').textContent = 'Класс не выбран';
+    document.getElementById('home-hero-portrait').textContent = '⚡';
+  }
+
+  document.getElementById('home-streak').textContent = streak;
+  document.getElementById('home-power').textContent = state.power;
+  document.getElementById('home-v').textContent = state.compoundV;
+  document.getElementById('home-v1').textContent = state.v1;
+  document.getElementById('home-v-big').textContent = state.compoundV;
+
+  // Tasks mini list
+  const doneTodayIds = getTodayTasksDone();
+  const doneCount = doneTodayIds.length;
+  const totalCount = state.tasks.length;
+  document.getElementById('home-tasks-count').textContent = doneCount + '/' + totalCount;
+
+  const tasksMini = document.getElementById('home-tasks-mini');
+  if (!state.tasks.length) {
+    tasksMini.innerHTML = `<div style="font-size:12px;color:var(--muted2);padding:8px 0;">Нет задач. Перейди во вкладку "Задачи".</div>`;
+  } else {
+    tasksMini.innerHTML = state.tasks.map(t => {
+      const done = doneTodayIds.includes(t.id);
+      const iso = (state.taskDoneAt[today] && state.taskDoneAt[today][t.id]) || '';
+      const timeStr = done && iso ? ('Выполнено · ' + formatDoneClock(iso)) : '';
+      const nameEsc = escapeHtml(t.name);
+      return '<div class="task-mini-card">' +
+        '<div class="task-mini-row" onclick="openTaskDetailModal(\'' + t.id + '\')">' +
+        '<div class="task-mini-dot' + (done ? ' done' : '') + '"></div>' +
+        '<div class="task-mini-main">' +
+        '<div class="task-mini-name' + (done ? ' done' : '') + '">' + nameEsc + '</div>' +
+        (timeStr ? '<div class="task-mini-time">' + escapeHtml(timeStr) + '</div>' : '') +
+        '</div>' +
+        '<button type="button" class="task-mini-toggle' + (done ? ' done' : '') + '" onclick="event.stopPropagation();toggleTaskToday(\'' + t.id + '\')" aria-label="Отметить">' +
+        (done ? '<span>✓</span>' : '<span style="opacity:.35;">○</span>') +
+        '</button></div></div>';
+    }).join('');
+  }
+
+  // Check button
+  const btn = document.getElementById('home-check-btn');
+  const btnText = document.getElementById('home-check-text');
+  const allTasksDone = totalCount > 0 && doneCount === totalCount;
+  btn.className = 'big-check-btn';
+  if (checked) {
+    btn.classList.add('done');
+    btn.onclick = null;
+    btnText.innerHTML = '<span class="check-inner"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="12" r="11" stroke="rgba(150,150,150,0.4)" stroke-width="1.5"/><path d="M7 12l3.5 3.5L17 8" stroke="#888" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="check-done-text">DAY COMPLETE</span></span>';
+  } else if (allTasksDone) {
+    btn.classList.add('available');
+    btn.onclick = checkToday;
+    btnText.innerHTML = 'ОТМЕТИТЬ СЕГОДНЯШНИЙ ДЕНЬ';
+  } else {
+    btn.classList.add('disabled');
+    btn.onclick = () => showToast('Сначала выполни все задачи!', false);
+    btnText.innerHTML = `ЗАДАЧИ: ${doneCount}/${totalCount}`;
+  }
+
+  // Week strip
+  const weekEl = document.getElementById('home-week');
+  weekEl.innerHTML = '';
+  const DAYS_RU = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  for (let i = 6; i >= 0; i--) {
+    const dateKey = dateStrFromOffset(-i);
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const dayName = DAYS_RU[d.getDay()];
+    const isDone = !!state.days[dateKey];
+    const isToday = dateKey === today;
+    const div = document.createElement('div');
+    div.className = 'week-cell';
+    div.innerHTML = `
+      <div style="font-family:var(--font-ui);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:${isToday ? 'var(--red)' : 'var(--muted)'};">${dayName}</div>
+      <div style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${isDone ? 'rgba(227,6,19,0.12)' : isToday ? 'rgba(255,255,255,0.04)' : '#0c0c0c'};border:1px solid ${isDone ? 'rgba(227,6,19,0.4)' : isToday ? 'rgba(255,255,255,0.08)' : '#181818'};">
+        ${isDone
+          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5.5 5.5L20 7" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+          : isToday
+            ? `<div style="width:5px;height:5px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.25);"></div>`
+            : `<div style="width:3px;height:3px;border-radius:50%;background:#2a2a2a;"></div>`
+        }
+      </div>
+    `;
+    weekEl.appendChild(div);
+  }
+
+  // Next boss
+  const allDefeated = state.defeatedBosses;
+  const nextBoss = BOSSES.find(b => !allDefeated.includes(b.id));
+  const bossCont = document.getElementById('home-next-boss');
+  if (nextBoss) {
+    bossCont.style.display = 'block';
+    const av = document.getElementById('home-boss-avatar');
+    av.innerHTML = '';
+    av.style.fontSize = '';
+    if (nextBoss.photo) {
+      const img = document.createElement('img');
+      img.className = 'home-boss-face';
+      img.src = nextBoss.photo;
+      img.alt = '';
+      img.decoding = 'async';
+      if (nextBoss.id === 'soldierboy') img.style.objectPosition = '85% 22%';
+      img.onerror = function () {
+        av.textContent = nextBoss.emoji;
+        av.style.fontSize = '26px';
+      };
+      av.appendChild(img);
+    } else {
+      av.textContent = nextBoss.emoji;
+      av.style.fontSize = '26px';
+    }
+    document.getElementById('home-boss-name').textContent = nextBoss.name;
+    const pctP = Math.min(100, Math.round((state.power / nextBoss.reqPower) * 100));
+    document.getElementById('home-boss-req').textContent = `Сила ${state.power}/${nextBoss.reqPower}`;
+    document.getElementById('home-boss-prog').style.width = pctP + '%';
+    document.getElementById('home-boss-pct').textContent = pctP + '%';
+  } else {
+    bossCont.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════
+   RENDER ABILITIES
+═══════════════════════════════════════ */
+function renderAbilities() {
+  const content = document.getElementById('abilities-content');
+  const subtitle = document.getElementById('ab-class-subtitle');
+
+  if (!state.playerClass) {
+    subtitle.textContent = 'Класс не выбран';
+    content.innerHTML = `<div class="no-class-note">⚗️<br><br>Используй сыворотку V во вкладке Главная,<br>чтобы выбрать <span style="color:var(--red);">класс</span></div>`;
+    return;
+  }
+
+  subtitle.textContent = CLASSES[state.playerClass].emoji + ' ' + state.playerClass.toUpperCase();
+  const abilities = ABILITIES[state.playerClass];
+
+  // Count how many bosses defeated to know if V1 is available
+  const bossesDefeated = state.defeatedBosses.length;
+  const v1Available = bossesDefeated >= 4; // V1 unlocked only after 4th boss
+
+  let html = `
+    <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;">
+      <div class="badge badge-red">V: ${state.compoundV}</div>
+      <div class="badge badge-gold">V1: ${state.v1}</div>
+      <div class="badge badge-dark">Сила: ${state.power}</div>
+      ${!v1Available ? `<div class="badge badge-dark" style="font-size:10px;">V1 — после 4-го босса</div>` : ''}
+    </div>
+    <div style="font-family:var(--font-ui);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Дерево способностей · ${state.playerClass}</div>
+  `;
+
+  abilities.forEach((ab, idx) => {
+    const owned = state.ownedAbilities.includes(ab.id);
+    const needsV1 = !!ab.cost.v1;
+    const costStr = ab.cost.v1 ? `${ab.cost.v1} V1` : `${ab.cost.v} V`;
+    const costColor = ab.cost.v1 ? 'var(--gold)' : 'var(--red)';
+    const canAfford = ab.cost.v1 ? (v1Available && state.v1 >= ab.cost.v1) : state.compoundV >= ab.cost.v;
+    const isBlocked = needsV1 && !v1Available;
+    const clickable = !owned && !isBlocked;
+
+    let cardClass = 'ability-card';
+    if (owned) cardClass += ' owned';
+    else if (!canAfford || isBlocked) cardClass += ' locked';
+
+    html += `
+      <div class="${cardClass}" style="margin-bottom:8px;" ${clickable ? `data-buy="${ab.id}"` : ''}>
+        <div>
+          <div class="ability-col-main">
+            <div class="ability-title-row">
+              <span style="font-family:var(--font-display);font-size:12px;color:var(--muted);min-width:20px;flex-shrink:0;">${idx+1}</span>
+              <div class="ability-name">${ab.name}</div>
+              ${owned ? '<span style="color:var(--red);font-size:13px;flex-shrink:0;">✓</span>' : ''}
+            </div>
+            <div class="ability-desc">${isBlocked ? '🔒 Доступно после 4-го босса' : ab.desc}</div>
+          </div>
+          <div class="ability-col-side">
+            ${owned
+              ? `<div style="font-family:var(--font-display);font-size:13px;color:var(--red);line-height:1.2;">+${ab.power} 💪</div>`
+              : `<div class="ability-cost" style="color:${isBlocked ? 'var(--muted)' : costColor};font-size:12px;justify-content:flex-end;flex-wrap:wrap;">${costStr}</div>
+                 <div style="font-family:var(--font-ui);font-size:10px;color:var(--muted2);margin-top:4px;line-height:1.2;">+${ab.power} сила</div>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  content.innerHTML = html;
+
+  // Attach click handlers after DOM is built — avoids quote-escaping issues
+  content.querySelectorAll('[data-buy]').forEach(el => {
+    el.addEventListener('click', () => buyAbility(el.dataset.buy));
+  });
+}
+
+function buyAbility(abilityId) {
+  if (!state.playerClass) return;
+  const ab = ABILITIES[state.playerClass].find(a => a.id === abilityId);
+  if (!ab || state.ownedAbilities.includes(abilityId)) return;
+
+  const bossesDefeated = state.defeatedBosses.length;
+  const v1Available = bossesDefeated >= 4;
+
+  if (ab.cost.v1) {
+    if (!v1Available) { showToast('🔒 V1 доступна после 4-го босса!', false); return; }
+    if (state.v1 < ab.cost.v1) { showToast('Недостаточно сыворотки V 1', false); return; }
+    state.v1 -= ab.cost.v1;
+  } else {
+    if (state.compoundV < ab.cost.v) { showToast('Недостаточно сыворотки V', false); return; }
+    state.compoundV -= ab.cost.v;
+  }
+
+  state.ownedAbilities.push(abilityId);
+  state.power += ab.power;
+  saveState();
+
+  if (window.Telegram?.WebApp?.HapticFeedback) {
+    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+  }
+
+  showToast('🧬 ' + ab.name + ' +' + ab.power + ' силы', true);
+  renderAbilities();
+  renderHome();
+}
+
+/* ═══════════════════════════════════════
+   RENDER BOSSES
+   - Нельзя начать бой если нет нужной силы
+   - Boss card clearly shows if you can fight
+═══════════════════════════════════════ */
+function renderBosses() {
+  const content = document.getElementById('bosses-content');
+  const streak = recalcStreak();
+  state.streak = streak;
+  let html = '';
+
+  html += `
+    <div style="padding:0 0 12px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="badge badge-dark">Сила: ${state.power}</div>
+        <div class="badge badge-dark">Стрик: ${streak} 🔥</div>
+        <div class="badge badge-red">V: ${state.compoundV}</div>
+        ${state.v1 > 0 ? `<div class="badge badge-gold">V1: ${state.v1}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  BOSSES.forEach((boss, index) => {
+    const defeated = state.defeatedBosses.includes(boss.id);
+    const prevDefeated = index === 0 || BOSSES.slice(0, index).every(b => state.defeatedBosses.includes(b.id));
+    const meetsStreak = streak >= boss.reqStreak;
+    const meetsPower = state.power >= boss.reqPower;
+    const canFight = !defeated && prevDefeated && meetsPower; // открывается только по силе
+    const streakReady = meetsStreak; // стрик нужен для запуска боя (серии)
+    const isUnlocked = !defeated && prevDefeated;
+    const isLockedBoss = !defeated && !prevDefeated;
+
+    const rewardStr = boss.reward.v1 ? `+${boss.reward.v1} V1` : `+${boss.reward.v} V`;
+    const rewardColor = boss.reward.v1 ? 'var(--gold)' : 'var(--red)';
+
+    let stripeClass = 'grey';
+    if (defeated) stripeClass = 'gold';
+    else if (canFight) stripeClass = 'red';
+    else if (isUnlocked) stripeClass = 'red';
+
+    let statusBadge = '';
+    if (defeated) {
+      statusBadge = '<span class="badge badge-gold">✓ ПОВЕРЖЕН</span>';
+    } else if (isLockedBoss) {
+      statusBadge = '<span class="badge badge-dark">🔒 ЗАПЕРТ</span>';
+    } else if (canFight) {
+      statusBadge = '<span class="badge badge-red">⚔️ НАЧАТЬ БОЙ</span>';
+    } else {
+      statusBadge = `<span class="badge badge-dark">НЕ ГОТОВ</span>`;
+    }
+
+    const pctP = Math.min(100, Math.round((state.power / boss.reqPower) * 100));
+
+    let cardClass = `boss-card`;
+    if (canFight) cardClass += ' available';  // canFight = power met, streak doesn't matter for unlock
+    else if (defeated) cardClass += ' defeated';
+    else if (isLockedBoss) cardClass += ' locked-boss';
+    else cardClass += ' needs-more';
+
+    // Кликабельно если сила есть (стрик проверяется внутри fightBoss)
+    const clickHandler = canFight ? `onclick="fightBoss('${boss.id}')"` : '';
+
+    // Info block
+    let missingHtml = '';
+    if (isUnlocked && !defeated && !meetsPower) {
+      missingHtml = `<div class="boss-tip neutral">⚡ Нужно силы ещё: <span style="color:var(--red);font-weight:700;">${boss.reqPower - state.power}</span> — покупай способности</div>`;
+    } else if (canFight) {
+      // power met — show streak requirement as the "battle series" info
+      missingHtml = `<div class="boss-tip redhint">⚔️ Для победы пройди серию: <span style="color:var(--red);font-weight:700;">${boss.reqStreak} дней</span> стрика подряд</div>`;
+    }
+
+    html += `
+      <div class="${cardClass}" ${clickHandler}>
+        <div class="boss-stripe ${stripeClass}"></div>
+        <div class="boss-inner">
+          <div class="boss-top-row" style="margin-bottom:${(!defeated && !isLockedBoss) ? '10px' : '0'};">
+            <div class="boss-emoji-cell" style="${isLockedBoss ? 'filter:grayscale(1);opacity:.3;' : ''}">${isLockedBoss ? '🔒' : bossAvatarMarkup(boss, false)}</div>
+            <div class="boss-text-cell">
+              <div class="boss-title-row">
+                <div class="boss-name" style="${isLockedBoss ? 'color:var(--muted);' : ''}">${isLockedBoss ? '???' : boss.name}</div>
+                ${statusBadge}
+              </div>
+              <div class="boss-req">${isLockedBoss ? 'Победи предыдущего врага' : boss.desc}</div>
+            </div>
+            <div class="boss-reward-cell">
+              <div class="boss-reward-val" style="color:${isLockedBoss ? 'var(--muted)' : rewardColor};">${isLockedBoss ? '?' : rewardStr}</div>
+            </div>
+          </div>
+          ${!defeated && !isLockedBoss ? `
+          <div class="boss-prog-block" style="margin-bottom:4px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:8px;min-width:0;">
+              <span style="font-family:var(--font-ui);font-size:10px;letter-spacing:0.08em;color:${meetsPower ? 'var(--muted)' : 'var(--red)'};text-transform:uppercase;flex-shrink:0;">Сила</span>
+              <span style="font-family:var(--font-ui);font-size:10px;color:${meetsPower ? 'var(--muted2)' : 'var(--red)'};text-align:right;min-width:0;overflow-wrap:anywhere;">${state.power}/${boss.reqPower}</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:${pctP}%"></div></div>
+          </div>
+          ${missingHtml}
+          ` : defeated ? `<div style="font-family:var(--font-ui);font-size:11px;color:var(--gold);opacity:.6;margin-top:6px;line-height:1.35;">✓ Победа одержана</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  content.innerHTML = html;
+}
+
+function fightBoss(bossId) {
+  const boss = BOSSES.find(b => b.id === bossId);
+  if (!boss) return;
+  const streak = recalcStreak();
+
+  // Проверяем только силу — стрик это условие ПОБЕДЫ (серия), не входа в бой
+  if (state.power < boss.reqPower) {
+    showToast(`❌ Недостаточно силы! Нужно ${boss.reqPower}, у тебя ${state.power}`, false);
+    return;
+  }
+  if (state.defeatedBosses.includes(bossId)) return;
+
+  const bossIndex = BOSSES.findIndex(b => b.id === bossId);
+  const prevDefeated = bossIndex === 0 || BOSSES.slice(0, bossIndex).every(b => state.defeatedBosses.includes(b.id));
+  if (!prevDefeated) { showToast('Сначала победи предыдущего врага!', false); return; }
+
+  // Проверяем стрик — это условие победы в серии
+  if (streak < boss.reqStreak) {
+    // Бой начат, но серия ещё не пройдена — показываем overlay с прогрессом
+    const overlay = document.createElement('div');
+    overlay.className = 'fight-overlay';
+    overlay.innerHTML = `
+      ${fightBossFaceBlock(boss)}
+      <div class="fight-text" style="font-size:48px;">БОЙ ИДЁТ</div>
+      <div style="font-family:var(--font-display);font-size:28px;letter-spacing:3px;color:#fff;margin-top:8px;">${boss.name.toUpperCase()}</div>
+      <div style="font-family:var(--font-ui);font-size:14px;color:var(--muted2);letter-spacing:2px;margin-top:16px;text-transform:uppercase;">Серия: ${streak} / ${boss.reqStreak} дней</div>
+      <div style="width:200px;height:4px;background:rgba(255,255,255,0.1);border-radius:99px;margin-top:12px;overflow:hidden;">
+        <div style="height:100%;width:${Math.round(streak/boss.reqStreak*100)}%;background:var(--red);border-radius:99px;box-shadow:0 0 8px var(--red);"></div>
+      </div>
+      <div style="font-family:var(--font-ui);font-size:12px;color:var(--muted);margin-top:10px;">Продолжай каждый день!</div>
+    `;
+    document.body.appendChild(overlay);
+    if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    setTimeout(() => document.body.removeChild(overlay), 2800);
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'fight-overlay';
+  overlay.innerHTML = `
+    ${fightBossFaceBlock(boss)}
+    <div class="fight-text">VS</div>
+    <div style="font-family:var(--font-display);font-size:34px;letter-spacing:4px;color:#fff;margin-top:8px;">${boss.name.toUpperCase()}</div>
+    <div style="font-family:var(--font-ui);font-size:13px;color:var(--muted2);letter-spacing:2px;margin-top:8px;text-transform:uppercase;">Идёт бой...</div>
+  `;
+  document.body.appendChild(overlay);
+
+  if (window.Telegram?.WebApp?.HapticFeedback) {
+    window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+  }
+
+  setTimeout(() => {
+    const rewardText = boss.reward.v1 ? `+${boss.reward.v1} V1` : `+${boss.reward.v} ⚗️ Compound V`;
+    overlay.innerHTML = `
+      <div style="font-size:64px;margin-bottom:12px;">🏆</div>
+      <div style="font-family:var(--font-display);font-size:48px;letter-spacing:4px;color:var(--gold);text-shadow:0 0 40px rgba(240,192,64,0.5);">ПОБЕДА</div>
+      <div style="font-family:var(--font-ui);font-size:17px;letter-spacing:2px;color:var(--text);margin-top:8px;">${boss.name} повержен</div>
+      <div style="font-family:var(--font-display);font-size:26px;color:${boss.reward.v1 ? 'var(--gold)' : 'var(--red)'};margin-top:14px;">${rewardText}</div>
+    `;
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    }
+
+    setTimeout(() => {
+      state.defeatedBosses.push(bossId);
+      if (boss.reward.v1) state.v1 += boss.reward.v1;
+      else state.compoundV += boss.reward.v;
+
+      // Unlock V1 notification if this is the 4th boss
+      if (state.defeatedBosses.length === 4) {
+        setTimeout(() => {
+          showToast('🧬 V1 СЫВОРОТКА РАЗБЛОКИРОВАНА!', true);
+        }, 500);
+      }
+
+      if (bossId === 'homelander') {
+        state.hasTitle = true;
+        showUnlockPopup('🌟', 'THE NEW\nHOMELANDER', 'Ты достиг вершины', () => {});
+      }
+      saveState();
+      document.body.removeChild(overlay);
+      renderBosses();
+      renderHome();
+    }, 2000);
+  }, 2000);
+}
+
+/* ═══════════════════════════════════════
+   RENDER CLASS SELECT
+═══════════════════════════════════════ */
+let selectedClass = null;
+
+function renderClassSelect() {
+  document.getElementById('class-v-count').textContent = state.compoundV;
+  const grid = document.getElementById('class-grid');
+  selectedClass = state.playerClass;
+
+  let html = '';
+  Object.entries(CLASSES).forEach(([key, cls]) => {
+    const selected = selectedClass === key;
+    html += `
+      <div class="class-card ${selected ? 'selected' : ''}" id="class-card-${key}" onclick="selectClass('${key}')">
+        <div class="class-emoji">${cls.emoji}</div>
+        <div class="class-name">${key.toUpperCase()}</div>
+        <div class="class-desc">${cls.desc}</div>
+      </div>
+    `;
+  });
+  grid.innerHTML = html;
+
+  const confirmBtn = document.getElementById('class-confirm-btn');
+  confirmBtn.style.display = selectedClass && !state.playerClass ? 'block' : 'none';
+}
+
+function selectClass(className) {
+  if (state.playerClass) return;
+  selectedClass = className;
+  document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('class-card-' + className);
+  if (card) card.classList.add('selected');
+  document.getElementById('class-confirm-btn').style.display = 'block';
+}
+
+function confirmClass() {
+  if (!selectedClass || state.playerClass) return;
+  state.playerClass = selectedClass;
+  state.pendingClassSelect = false;
+  if (state.compoundV > 0) state.compoundV--;
+  saveState();
+
+  if (window.Telegram?.WebApp?.HapticFeedback) {
+    window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+  }
+
+  showUnlockPopup(CLASSES[selectedClass].emoji, selectedClass.toUpperCase(), 'Твой класс выбран навсегда', () => {
+    navigateRaw('abilities');
+  });
+}
+
+/* ═══════════════════════════════════════
+   MODAL SYSTEM
+═══════════════════════════════════════ */
+function showModal(title, bodyHtml, buttons) {
+  hideModal();
+  const container = document.getElementById('modal-container');
+  const btnHtml = buttons.map(b => {
+    const cls = b.style === 'primary' ? 'btn-primary' : b.style === 'danger' ? 'btn-danger' : 'btn-secondary';
+    return `<button class="${cls}" style="flex:1;padding:14px;" onclick="(${b.action.toString()})()">${b.label}</button>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)hideModal()">
+      <div class="modal-box">
+        <div class="modal-title" style="margin-bottom:14px;">${title}</div>
+        ${bodyHtml}
+        <div class="modal-actions" style="margin-top:28px;padding-bottom:8px;">${btnHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+function hideModal() {
+  document.getElementById('modal-container').innerHTML = '';
+}
+
+/* ═══════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════ */
+let toastTimer = null;
+function showToast(msg, isGood) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast' + (isGood ? ' gold' : '') + ' show';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function showUnlockPopup(emoji, title, subtitle, onClose) {
+  const popup = document.createElement('div');
+  popup.className = 'unlock-popup';
+  popup.innerHTML = `
+    <div class="unlock-big">${emoji}</div>
+    <div style="font-family:var(--font-display);font-size:46px;letter-spacing:4px;color:var(--red);text-shadow:0 0 40px var(--red-glow);margin-top:8px;white-space:pre-line;text-align:center;line-height:1.1;">${title}</div>
+    <div style="font-family:var(--font-ui);font-size:15px;letter-spacing:0.12em;color:var(--muted2);text-transform:uppercase;margin-top:12px;" class="unlock-sub">${subtitle}</div>
+    <button class="btn-primary" style="margin-top:28px;padding:15px 44px;font-size:17px;" onclick="document.body.removeChild(this.parentNode);(${onClose.toString()})();">ПРОДОЛЖИТЬ</button>
+  `;
+  document.body.appendChild(popup);
+}
+
+/* ═══════════════════════════════════════
+   BOOT
+═══════════════════════════════════════ */
+checkStreakReset();
+
+if (!state.registered) {
+  document.getElementById('main-tab-bar').style.display = 'none';
+} else if (state.pendingClassSelect) {
+  navigateRaw('class');
+} else {
+  navigateRaw('home');
+}
+</script>
+</body>
+</html>
